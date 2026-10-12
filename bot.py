@@ -2,6 +2,8 @@ import asyncio
 import datetime
 import json
 import logging
+import os
+from aiohttp import web
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -13,8 +15,9 @@ from aiogram.filters import Command
 from aiogram.types import FSInputFile, ReplyKeyboardMarkup, KeyboardButton
 
 # ==================== НАСТРОЙКИ ====================
-BOT_TOKEN = "8841026536:AAHkfc7jEAO-Aie4SRwSpPe6EENj8mNApVw"  # Токен от @BotFather
-BEARER_TOKEN = (
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8841026536:ВАШ_ТОКЕН")
+BEARER_TOKEN = os.environ.get(
+    "BEARER_TOKEN",
     "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiJhMmI4MzQyOC0yYmY0LTRiMGQtYTRhZi1lZjMzNDBhZmI0MmYiLCJqdGkiOiI1YTFlNDAyZTA3OWQ2ZjE4MWFhMGQzZmUwNjg2Njg3NDI0ZjBmNDZjMmNjOWEyMDYxZmZlM2IyMTFhYjQ0NjA4NzI0NThmYzZiZmY2MGFhMSIsImlhdCI6MTc5MTc4MjA1MC41MzY1NzksIm5iZiI6MTc5MTc4MjA1MC41MzY1ODEsImV4cCI6MTgyMzMxODA1MC41MTE1OTEsInN1YiI6Ijk3MzYwOTY2Iiwic2NvcGVzIjpbXX0.F9Sfvq2q7jpTojbfub7iMWyD3V2AMhNbS1MxLojhP0GXRzaE1NszGtd3xuXjTuzxa-btw-dDp_JTHIPm83u-8tnS6zB-Gxhb5t4XwTdZN5sxEvilj0kuEeOkx2WmzAEn4uU_1pY4Lsd8s6iyQV6sKcYRDd-NNEY9TgQOj8xwWbHSxBwpi6eKiR0fQaQGEbcYtdAjj9WrdVemsgWBJ27rCDlL1GlZJKXOkCrTWtyt5io7MGrN3UZnkvLXuzGXfmefzoba4PZJ9Z_NRE4NUfPjYxOY0WMz3_McbWk49Nveg85hx0x3fbrG2Cds4WayRu_axUOUJmKgvO9XqZnU0hr9OkWy7wy8wCZ2QybHWVjLp4-ctYgZ5m7RaOIN_5B9X76pr07g3qtXx-PhUeW9SvD2AN13mblOHcDvjS6gKgguhYOfQ8U32MihokCO2anJ3-wWJHH7dSu2A9DVWigUfHuB51ma17er7anbNZTfcAJAA0m023EX0di35pOa5OAGOvz0H7eMLwVYheluG_taI4DeWRPKnLNXr7JTRsGw75UCIC7xKYUQXwNikjChPpqyD01mVOS8W59GkwuGZLgK0rK5sOzZYVmhTkj8gV-3T0k-coDmWmpXYTTptrE7ZgLDJuBg6_DbLux5I_wIjlriqy4fJYLJn2ocv5VYCNUL73qKM5U"
 )
 SCHOOL_ID = "835"
@@ -87,7 +90,6 @@ def format_and_save_excel(json_data, target_date: str) -> str:
     file_path = f"BilimClass_Report_{target_date}.xlsx"
     df_filtered.to_excel(file_path, index=False)
 
-    # Применение стилей OpenPyXL
     wb = load_workbook(file_path)
     ws = wb.active
 
@@ -183,7 +185,19 @@ async def generate_and_send_report(message: types.Message, target_date: str):
     )
     await msg.delete()
 
+# Обработчик проверки веб-порта для Render
+async def handle_ping(request):
+    return web.Response(text="Bot is alive!")
+
 async def main():
+    app = web.Application()
+    app.router.add_get("/", handle_ping)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
